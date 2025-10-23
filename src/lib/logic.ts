@@ -19,8 +19,8 @@ export interface MegaTris {
     moves: [number, number][];
 }
 
-export const get_possible_moves = (game: Game, auth: string): [number, number][] => {
-    if (game.is_temp) {
+export const get_possible_moves = (game: Game, user_id: string): [number, number][] => {
+    if (game.is_draft) {
         return [];
     }
 
@@ -30,10 +30,10 @@ export const get_possible_moves = (game: Game, auth: string): [number, number][]
     }
 
     // Check if it's the player's turn
-    const is_player1 = game.player1_auth === auth;
-    const is_player2 = game.player2_auth === auth;
+    const is_player1 = game.player1_id === user_id;
+    const is_player2 = game.player2_id === user_id;
 
-    if ((!is_player1 && !is_player2) || game.player1_auth === game.player2_auth) {
+    if ((!is_player1 && !is_player2) || game.player1_id === game.player2_id) {
         return [];
     }
 
@@ -103,8 +103,8 @@ export const get_possible_moves = (game: Game, auth: string): [number, number][]
     return possible_moves;
 };
 
-export const can_make_move = (game: Game, auth: string, x: number, y: number): boolean => {
-    const possible_moves = get_possible_moves(game, auth);
+export const can_make_move = (game: Game, user_id: string, x: number, y: number): boolean => {
+    const possible_moves = get_possible_moves(game, user_id);
     return possible_moves.some(([px, py]) => px === x && py === y);
 };
 

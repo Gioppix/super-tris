@@ -1,29 +1,20 @@
-import { client_left, create_client, GAMES } from '$lib/server/game.js';
+import { client_left, create_client_request, GAMES } from '$lib/server/game.js';
 
-export function GET({ params: { game_id }, cookies }) {
-    const auth = cookies.get('auth');
-    if (!auth) {
-        return new Response('Unauthorized', { status: 401 });
-    }
-
-    if (GAMES.get(game_id) === undefined) {
-        return new Response('Game not found', { status: 404 });
-    }
-
-    const id = crypto.randomUUID();
+export function GET({ params: { game_id }, locals }) {
+    const stream_id = crypto.randomUUID();
 
     const stream = new ReadableStream({
         start(controller) {
-            create_client(game_id, {
-                auth,
+            create_client_request(game_id, {
+                user_id: locals.user_id,
                 stream: {
                     controller,
-                    id
+                    stream_id
                 }
             });
         },
         cancel() {
-            client_left(id, game_id);
+            client_left(stream_id, game_id);
         }
     });
 

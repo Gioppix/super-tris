@@ -1,6 +1,8 @@
 import type { MegaTris } from '$lib/logic';
 import type { Game, TempGame } from './game';
 
+export type CloseReason = 'game_not_found' | 'game_started_with_others' | 'game_already_started';
+
 export type Message =
     | {
           type: 'game_state';
@@ -19,4 +21,8 @@ export type Message =
       }
     | {
           type: 'heartbeat';
+      }
+    | {
+          type: 'closing';
+          reason: CloseReason;
       };

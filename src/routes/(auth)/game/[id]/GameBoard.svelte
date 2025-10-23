@@ -5,17 +5,17 @@
 
     interface Props {
         game_state: Game;
-        auth_token: string;
+        user_id: string;
         on_move: (x: number, y: number) => void;
     }
 
-    let { game_state, auth_token, on_move }: Props = $props();
+    let { game_state, user_id, on_move }: Props = $props();
 
-    let possible_moves_array = $derived(get_possible_moves(game_state, auth_token));
+    let possible_moves_array = $derived(get_possible_moves(game_state, user_id));
     let possible_moves_set = $derived(new Set(possible_moves_array.map(([x, y]) => `${x},${y}`)));
 
-    let is_player1 = $derived(game_state.player1_auth === auth_token);
-    let is_player2 = $derived(game_state.player2_auth === auth_token);
+    let is_player1 = $derived(game_state.player1_id === user_id);
+    let is_player2 = $derived(game_state.player2_id === user_id);
     let move_count = $derived(game_state.state.moves.length);
     let is_player1_turn = $derived(move_count % 2 === 0);
     let is_player_turn = $derived(

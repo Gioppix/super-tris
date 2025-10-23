@@ -1,68 +1,93 @@
 import { can_make_move, is_game_completed, type MegaTris } from '$lib/logic';
 import { z } from 'zod';
-import type { Message } from './messages';
-import { HEARTBEAT_INTERVAL_MS } from '$lib';
+import type { CloseReason, Message } from './messages';
+import { HEARTBEAT_BASE_MS } from '$lib';
 
 export const GAMES: Map<string, Game | TempGame> = new Map();
 GAMES.set('d3d4dfff-b8d1-41e5-9332-15a6ab6a8835', {
-    is_temp: true,
-    player1_auth: 'd3d4dfff-b8d1-41e5-9332-15a6ab6a8836'
+    is_draft: true,
+    player1_id: 'd3d4dfff-b8d1-41e5-9332-15a6ab6a8836'
 });
+
+console.log('init backend');
 
 let CLIENTS: Map<string, Client[]> = new Map();
 
-export const create_client = (game_id: string, client: Client) => {
-    console.log(game_id, client.auth);
+export const create_client_request = (game_id: string, client: Client) => {
+    const game = GAMES.get(game_id);
 
-    const clients = CLIENTS.get(game_id) ?? [];
-    clients.push(client);
-    CLIENTS.set(game_id, clients);
+    if (!game) {
+        close_client(client, 'game_not_found');
+        return;
+    }
 
-    let matching_games = GAMES.values()
-        .filter(
-            (g) =>
-                g.player1_auth == client.auth || (g.is_temp ? true : g.player2_auth == client.auth)
-        )
-        .toArray();
+    // Only allow owners and guests (if game not started)
+    if (
+        game.player1_id === client.user_id ||
+        (game.is_draft ? true : game.player2_id == client.user_id)
+    ) {
+        let current_clients = CLIENTS.get(game_id) ?? [];
+        current_clients.push(client);
+        CLIENTS.set(game_id, current_clients);
 
-    let game = matching_games.at(0);
-
-    if (!game) return;
-
-    notify(game_id, { type: 'ok' });
-    notify(game_id, { type: 'game_state', game_state: game });
-    check_presence(game_id);
+        notify(game_id, { type: 'game_state', game_state: game });
+        check_presence(game_id);
+    } else {
+        close_client(client, 'game_already_started');
+    }
 };
 
-export const client_left = (client_id: string, game_id: string) => {
+const close_client = (client: Client, reason: CloseReason) => {
+    send_message(client, { type: 'closing', reason });
+    client.stream.controller.close();
+
+    // Could just check that game but this is to be extra sure
+    for (const [game_id, clients] of CLIENTS.entries()) {
+        CLIENTS.set(
+            game_id,
+            clients.filter((c) => c.stream.stream_id !== client.stream.stream_id)
+        );
+    }
+};
+
+export const client_left = (stream_id: string, game_id: string) => {
     const clients = CLIENTS.get(game_id);
     if (clients) {
         CLIENTS.set(
             game_id,
-            clients.filter((client) => client.stream.id !== client_id)
+            clients.filter((client) => client.stream.stream_id !== stream_id)
         );
     }
     check_presence(game_id);
 };
 
-export const player_2_join_game = (join_game: JoinGame): boolean => {
+export const player_2_join_game = (join_game: JoinGame, user_id: string): boolean => {
     const game = GAMES.get(join_game.game_id);
 
-    if (!game || !game.is_temp) {
+    if (!game || !game.is_draft) {
         return false;
     }
 
-    if (join_game.auth == game.player1_auth) {
+    if (user_id == game.player1_id) {
         return false;
     }
 
-    const new_game = {
-        is_temp: false,
-        player1_auth: game.player1_auth,
-        player2_auth: join_game.auth,
+    const new_game: Game = {
+        is_draft: false,
+        player1_id: game.player1_id,
+        player2_id: user_id,
         state: { moves: [] },
         name: game.name
     };
+
+    // Remove guest clients when game starts
+    const clients = CLIENTS.get(join_game.game_id) ?? [];
+    const guests = clients.filter(
+        (client) => client.user_id !== game.player1_id && client.user_id !== user_id
+    );
+    guests.forEach((guest) => {
+        close_client(guest, 'game_started_with_others');
+    });
 
     GAMES.set(join_game.game_id, new_game);
 
@@ -75,7 +100,7 @@ export const player_2_join_game = (join_game: JoinGame): boolean => {
 
 setInterval(() => {
     notify_all({ type: 'heartbeat' });
-}, HEARTBEAT_INTERVAL_MS);
+}, HEARTBEAT_BASE_MS);
 
 const check_presence = (game_id: string) => {
     const game = GAMES.get(game_id);
@@ -83,10 +108,10 @@ const check_presence = (game_id: string) => {
 
     const clients = CLIENTS.get(game_id) ?? [];
 
-    const player1_presence = clients.some((client) => client.auth === game.player1_auth);
-    const player2_presence = game.is_temp
+    const player1_presence = clients.some((client) => client.user_id === game.player1_id);
+    const player2_presence = game.is_draft
         ? false
-        : clients.some((client) => client.auth === game.player2_auth);
+        : clients.some((client) => client.user_id === game.player2_id);
 
     notify(game_id, {
         type: 'player_presence',
@@ -95,16 +120,17 @@ const check_presence = (game_id: string) => {
     });
 };
 
-export const notify = (game_id: string, message: Message) => {
+const notify = (game_id: string, message: Message) => {
     const clients = CLIENTS.get(game_id) ?? [];
-    const data = JSON.stringify(message);
 
     clients.forEach((client) => {
-        console.log('here!');
-        client.stream.controller.enqueue(`data: ${data}\n\n`);
+        send_message(client, message);
     });
+};
 
-    // controller.close();
+const send_message = (client: Client, message: Message) => {
+    const data = JSON.stringify(message);
+    client.stream.controller.enqueue(`data: ${data}\n\n`);
 };
 
 export const notify_all = (message: Message) => {
@@ -117,15 +143,15 @@ export const notify_all = (message: Message) => {
 export const try_make_move = (
     game_id: string,
     game: Game,
-    auth: string,
+    user_id: string,
     x: number,
     y: number
 ): boolean => {
-    if (game.is_temp) {
+    if (game.is_draft) {
         return false;
     }
 
-    if (!can_make_move(game, auth, x, y)) {
+    if (!can_make_move(game, user_id, x, y)) {
         return false;
     }
 
@@ -141,44 +167,41 @@ export const try_make_move = (
 };
 
 export const CreateGame = z.object({
-    name: z.string().optional(),
-    auth: z.string()
+    name: z.string().optional()
 });
 export type CreateGame = z.infer<typeof CreateGame>;
 
 export const JoinGame = z.object({
-    game_id: z.uuidv4(),
-    auth: z.string()
+    game_id: z.uuidv4()
 });
 export type JoinGame = z.infer<typeof JoinGame>;
 
 export const MakeMove = z.object({
     game_id: z.uuidv4(),
     x: z.int().min(0).max(8),
-    y: z.int().min(0).max(8),
-    auth: z.string()
+    y: z.int().min(0).max(8)
 });
 export type MakeMove = z.infer<typeof MakeMove>;
 
 type GameBase = {
     name?: string;
-    player1_auth: string;
+    player1_id: string;
 };
 
 export type TempGame = GameBase & {
-    is_temp: true;
+    is_draft: true;
 };
 
 export type Game = GameBase & {
-    is_temp: false;
+    is_draft: false;
     state: MegaTris;
-    player2_auth: string;
+    player2_id: string;
 };
 
 export interface Client {
-    auth: string;
+    user_id: string;
     stream: {
-        id: string;
+        stream_id: string;
         controller: ReadableStreamDefaultController<any>;
     };
 }

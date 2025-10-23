@@ -1,15 +1,19 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
+    import { create_game } from '$lib/data.remote';
     import type { PageProps } from './$types';
-    import { create_game } from './api/data.remote';
 
     let { data }: PageProps = $props();
 
-    function handle_create_game() {
-        create_game({
-            name: 'example game',
-            auth: data.auth_token
+    async function handle_create_game() {
+        let game_id = await create_game({
+            name: 'example game'
         });
+
+        goto(`/game/${game_id}`);
     }
 </script>
 
-<button onclick={handle_create_game}> Create Game </button>
+<div class="flex h-full w-full items-center justify-center">
+    <button class="cursor-pointer" onclick={handle_create_game}> Create Game </button>
+</div>

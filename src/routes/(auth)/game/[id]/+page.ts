@@ -2,7 +2,7 @@ import { readable } from 'svelte/store';
 import type { PageLoad } from './$types';
 import type { Message } from '$lib/server/messages';
 import type { Game, TempGame } from '$lib/server/game';
-import { HEARTBEAT_INTERVAL_MS } from '$lib';
+import { HEARTBEAT_BASE_MS, HEARTBEAT_FRONTEND_MULTIPLIER } from '$lib';
 
 interface GameState {
     game_state: Game | TempGame | null;
@@ -13,8 +13,6 @@ interface GameState {
 }
 
 export const load: PageLoad = ({ params: { id } }) => {
-    const stream = new EventSource(`/api/${id}`);
-
     const overall_state = readable<GameState>(
         {
             game_state: null,
@@ -24,6 +22,8 @@ export const load: PageLoad = ({ params: { id } }) => {
             error: null
         },
         (_, update) => {
+            const stream = new EventSource(`/api/${id}`);
+
             let heartbeat_timeout: ReturnType<typeof setTimeout> | null = null;
 
             const reset_heartbeat_timeout = () => {
@@ -35,10 +35,16 @@ export const load: PageLoad = ({ params: { id } }) => {
                         ...current_state,
                         error: 'Connection timeout: no heartbeat received'
                     }));
-                }, HEARTBEAT_INTERVAL_MS * 1.1);
+                }, HEARTBEAT_BASE_MS * HEARTBEAT_FRONTEND_MULTIPLIER);
             };
 
             reset_heartbeat_timeout();
+            const stop = () => {
+                if (heartbeat_timeout) {
+                    clearTimeout(heartbeat_timeout);
+                }
+                stream.close();
+            };
 
             stream.onmessage = (event) => {
                 console.log('here');
@@ -60,15 +66,17 @@ export const load: PageLoad = ({ params: { id } }) => {
                         case 'ok':
                             return current_state;
                         case 'heartbeat':
+                            reset_heartbeat_timeout();
                             return current_state;
+                        case 'closing':
+                            stop();
+                            return { ...current_state, error: message.reason };
                         default:
                             ((x: never) => {
                                 throw new Error(`Unhandled message type: ${x}`);
                             })(message);
                     }
                 });
-
-                reset_heartbeat_timeout();
             };
 
             stream.onerror = (e) => {
@@ -79,17 +87,12 @@ export const load: PageLoad = ({ params: { id } }) => {
                 console.error(e);
             };
 
-            return () => {
-                if (heartbeat_timeout) {
-                    clearTimeout(heartbeat_timeout);
-                }
-                stream.close();
-            };
+            return stop;
         }
     );
 
     return {
-        id,
+        game_id: id,
         overall_state
     };
 };
