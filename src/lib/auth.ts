@@ -10,7 +10,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from '../../migrations/auth-schema';
 
 const DB_NAME = 'sqlite.db';
-mkdirSync(dirname(SQLITE_PATH), { recursive: true });
+mkdirSync(SQLITE_PATH, { recursive: true });
 
 const sqlite = new Database(`${SQLITE_PATH}/${DB_NAME}`);
 const db = drizzle({ client: sqlite, schema });
