@@ -13,12 +13,12 @@ const DB_NAME = 'sqlite.db';
 mkdirSync(SQLITE_PATH, { recursive: true });
 
 const sqlite = new Database(`${SQLITE_PATH}/${DB_NAME}`);
-const db = drizzle({ client: sqlite, schema });
+export const db = drizzle({ client: sqlite, schema });
 migrate(db, {
     migrationsFolder: './drizzle'
 });
 
-const cache = new LRUCache<string, string>({
+export const cache = new LRUCache<string, string>({
     max: 500,
     ttl: 1000 * 60 * 60,
     // While hosting RAM is much more expensive than the computation required to clear

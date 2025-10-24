@@ -1,4 +1,4 @@
-import type { Game } from './server/game';
+import type { Game, TempGame } from './server/game';
 
 /**
  * Super Tris (Ultimate Tic-Tac-Toe) Rules:
@@ -101,6 +101,14 @@ export const get_possible_moves = (game: Game, user_id: string): [number, number
     }
 
     return possible_moves;
+};
+
+export const is_in_game = (game: TempGame | Game, user_id: string): boolean => {
+    if (game.is_draft) {
+        return user_id === game.player1_id;
+    }
+
+    return user_id === game.player1_id || user_id === game.player2_id;
 };
 
 export const can_make_move = (game: Game, user_id: string, x: number, y: number): boolean => {

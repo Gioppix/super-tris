@@ -4,6 +4,7 @@
     import GameBoard from './GameBoard.svelte';
     import { join_game, make_move, send_rematch } from '$lib/data.remote';
     import { auth_client } from '$lib/client';
+    import Chat from './Chat.svelte';
 
     const session = auth_client.useSession();
 
@@ -112,39 +113,44 @@
 
         {#if error}
             <div class="text-red-400">{error}</div>
-        {:else if is_draft}
-            <div class="rounded bg-gray-800 p-8 text-center">
-                {#if is_owner}
-                    <div class="text-xl text-gray-400">Waiting for opponent to join...</div>
-                    <div class="mt-4 text-sm text-gray-500">Share this URL to invite a player</div>
-                    <div class="mt-4 flex items-center justify-center gap-2">
-                        <input
-                            type="text"
-                            readonly
-                            value={typeof window !== 'undefined' ? window.location.href : ''}
-                            class="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300"
-                        />
-                        <button
-                            onclick={handle_copy}
-                            class="w-24 rounded bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
-                        >
-                            {copy_button_text}
-                        </button>
-                    </div>
-                {:else}
-                    <div class="mb-4 text-xl text-gray-400">Ready to play?</div>
-                    <button
-                        onclick={handle_join}
-                        class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700"
-                    >
-                        Join Game
-                    </button>
-                {/if}
-            </div>
-        {:else if game_state && !game_state.is_draft}
-            <GameBoard {game_state} {user_id} on_move={handle_move} />
         {:else}
-            <div class="text-gray-400">Waiting for game to start...</div>
+            {#if is_draft}
+                <div class="rounded bg-gray-800 p-8 text-center">
+                    {#if is_owner}
+                        <div class="text-xl text-gray-400">Waiting for opponent to join...</div>
+                        <div class="mt-4 text-sm text-gray-500">
+                            Share this URL to invite a player
+                        </div>
+                        <div class="mt-4 flex items-center justify-center gap-2">
+                            <input
+                                type="text"
+                                readonly
+                                value={typeof window !== 'undefined' ? window.location.href : ''}
+                                class="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300"
+                            />
+                            <button
+                                onclick={handle_copy}
+                                class="w-24 rounded bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
+                            >
+                                {copy_button_text}
+                            </button>
+                        </div>
+                    {:else}
+                        <div class="mb-4 text-xl text-gray-400">Ready to play?</div>
+                        <button
+                            onclick={handle_join}
+                            class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700"
+                        >
+                            Join Game
+                        </button>
+                    {/if}
+                </div>
+            {:else if game_state && !game_state.is_draft}
+                <GameBoard {game_state} {user_id} on_move={handle_move} />
+            {:else}
+                <div class="text-gray-400">Waiting for game to start...</div>
+            {/if}
+            <Chat game_id={data.game_id} messages={$overall_state.chat} {user_id} />
         {/if}
     </div>
 </div>

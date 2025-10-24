@@ -1,9 +1,13 @@
-import { can_make_move, is_game_completed, type MegaTris } from '$lib/logic';
+import { can_make_move, is_game_completed, is_in_game, type MegaTris } from '$lib/logic';
 import { z } from 'zod';
-import type { CloseReason, Message } from './messages';
+import type { ChatMessage, ChatMessageWithNames, CloseReason, Message } from './messages';
 import { HEARTBEAT_BASE_MS } from '$lib';
+import { auth, cache, db } from '$lib/auth';
+import { get_name } from './database';
 
 export const GAMES: Map<string, Game | TempGame> = new Map();
+export const MESSAGES: Map<string, ChatMessage[]> = new Map();
+
 GAMES.set('d3d4dfff-b8d1-41e5-9332-15a6ab6a8835', {
     is_draft: true,
     player1_id: 'd3d4dfff-b8d1-41e5-9332-15a6ab6a8836'
@@ -13,7 +17,7 @@ console.log('init backend');
 
 let CLIENTS: Map<string, Client[]> = new Map();
 
-export const create_client_request = (game_id: string, client: Client) => {
+export const create_client_request = async (game_id: string, client: Client) => {
     const game = GAMES.get(game_id);
 
     if (!game) {
@@ -22,16 +26,17 @@ export const create_client_request = (game_id: string, client: Client) => {
     }
 
     // Only allow owners and guests (if game not started)
-    if (
-        game.player1_id === client.user_id ||
-        (game.is_draft ? true : game.player2_id == client.user_id)
-    ) {
+    if (is_in_game(game, client.user_id) || game.is_draft) {
         let current_clients = CLIENTS.get(game_id) ?? [];
         current_clients.push(client);
         CLIENTS.set(game_id, current_clients);
 
         notify(game_id, { type: 'game_state', game_state: game });
         check_presence(game_id);
+        notify(game_id, {
+            type: 'chat_messages',
+            messages: await add_names_to_messages(MESSAGES.get(game_id) ?? [])
+        });
     } else {
         close_client(client, 'game_already_started');
     }
@@ -177,6 +182,34 @@ export const handle_rematch = (game_id: string, game: Game, user_id: string): bo
     return true;
 };
 
+const add_name_to_message = async (message: ChatMessage): Promise<ChatMessageWithNames> => {
+    return {
+        ...message,
+        name: await get_name(message.user_id)
+    } satisfies ChatMessageWithNames;
+};
+
+const add_names_to_messages = async (messages: ChatMessage[]): Promise<ChatMessageWithNames[]> => {
+    const messagesWithNames = await Promise.all(messages.map(add_name_to_message));
+
+    return messagesWithNames;
+};
+
+export const handle_message = async (game_id: string, user_id: string, content: string) => {
+    const message: ChatMessage = {
+        content,
+        user_id,
+        timestamp: new Date()
+    };
+
+    const current_messages = MESSAGES.get(game_id) ?? [];
+    current_messages.push(message);
+    current_messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    MESSAGES.set(game_id, current_messages);
+
+    notify(game_id, { type: 'chat_message', message: await add_name_to_message(message) });
+};
+
 export const create_insert_game = (
     name: string | undefined,
     player1_id: string,
@@ -225,6 +258,12 @@ export const SendRematch = z.object({
 });
 export type SendRematch = z.infer<typeof SendRematch>;
 
+export const SendMessage = z.object({
+    game_id: z.uuidv4(),
+    message: z.string().trim().min(1).max(500)
+});
+export type SendMessage = z.infer<typeof SendMessage>;
+
 type GameBase = {
     name?: string;
     player1_id: string;
@@ -233,6 +272,11 @@ type GameBase = {
 export type TempGame = GameBase & {
     is_draft: true;
 };
+
+interface Lobby {
+    game: Game | TempGame;
+    chat: ChatMessage[];
+}
 
 export type Game = GameBase & {
     is_draft: false;

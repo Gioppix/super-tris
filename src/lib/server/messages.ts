@@ -1,7 +1,16 @@
-import type { MegaTris } from '$lib/logic';
 import type { Game, TempGame } from './game';
 
 export type CloseReason = 'game_not_found' | 'game_started_with_others' | 'game_already_started';
+
+export interface ChatMessage {
+    user_id: string;
+    content: string;
+    timestamp: Date;
+}
+
+export type ChatMessageWithNames = ChatMessage & {
+    name: string;
+};
 
 export type Message =
     | {
@@ -26,4 +35,12 @@ export type Message =
     | {
           type: 'new_game';
           game_id: string;
+      }
+    | {
+          type: 'chat_messages';
+          messages: ChatMessageWithNames[];
+      }
+    | {
+          type: 'chat_message';
+          message: ChatMessageWithNames;
       };

@@ -1,6 +1,6 @@
 import { readable } from 'svelte/store';
 import type { PageLoad } from './$types';
-import type { Message } from '$lib/server/messages';
+import type { ChatMessageWithNames, Message } from '$lib/server/messages';
 import type { Game, TempGame } from '$lib/server/game';
 import { HEARTBEAT_BASE_MS, HEARTBEAT_FRONTEND_MULTIPLIER } from '$lib';
 import { goto } from '$app/navigation';
@@ -12,6 +12,7 @@ interface GameState {
     player2_presence: boolean;
     game_ended: boolean;
     error: string | null;
+    chat?: ChatMessageWithNames[];
 }
 
 export const load: PageLoad = ({ params: { id } }) => {
@@ -77,6 +78,13 @@ export const load: PageLoad = ({ params: { id } }) => {
                         case 'new_game':
                             goto(`/game/${message.game_id}`);
                             return overall_state;
+                        case 'chat_messages':
+                            return { ...overall_state, chat: message.messages };
+                        case 'chat_message':
+                            return {
+                                ...overall_state,
+                                chat: [...(overall_state.chat ?? []), message.message]
+                            };
                         default:
                             ((x: never) => {
                                 throw new Error(`Unhandled message type: ${x}`);
