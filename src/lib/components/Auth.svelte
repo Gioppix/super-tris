@@ -4,7 +4,7 @@
 
 <button
     class="cursor-pointer"
-    on:click={async () => {
+    onclick={async () => {
         await auth_client.signIn.social({
             provider: 'google'
         });
@@ -15,7 +15,7 @@
 
 <button
     class="cursor-pointer"
-    on:click={async () => {
+    onclick={async () => {
         await auth_client.signIn.anonymous();
     }}
 >

@@ -3,26 +3,36 @@
     import PlayerInfo from './PlayerInfo.svelte';
     import GameBoard from './GameBoard.svelte';
     import { join_game, make_move } from '$lib/data.remote';
+    import { auth_client } from '$lib/client';
+
+    const session = auth_client.useSession();
 
     let { data }: PageProps = $props();
     let overall_state = $derived(data.overall_state);
 
+    let user_id = $derived.by(() => {
+        const user_id = $session.data?.user.id;
+        if (!user_id) throw new Error('No user_id');
+
+        return user_id;
+    });
+
     let game_state = $derived($overall_state.game_state);
     let is_draft = $derived(game_state?.is_draft ?? false);
-    let is_owner = $derived(game_state?.player1_id === data.user_id);
+    let is_owner = $derived(game_state?.player1_id === user_id);
     let game_ended = $derived($overall_state.game_ended);
     let error = $derived($overall_state.error);
 
     let current_player_symbol = $derived.by(() => {
         if (!game_state || game_state.is_draft) return null;
-        if (game_state.player1_id === data.user_id) return 'X' as const;
-        if (game_state.player2_id === data.user_id) return 'O' as const;
+        if (game_state.player1_id === user_id) return 'X' as const;
+        if (game_state.player2_id === user_id) return 'O' as const;
         return null;
     });
 
-    let is_player1 = $derived(game_state?.player1_id === data.user_id);
+    let is_player1 = $derived(game_state?.player1_id === user_id);
     let is_player2 = $derived(
-        game_state && game_state.is_draft ? false : game_state?.player2_id === data.user_id
+        game_state && game_state.is_draft ? false : game_state?.player2_id === user_id
     );
     let move_count = $derived(game_state?.is_draft === false ? game_state.state.moves.length : 0);
     let is_player1_turn = $derived(move_count % 2 === 0);
@@ -77,7 +87,7 @@
                 {/if}
             </div>
         {:else if game_state && !game_state.is_draft}
-            <GameBoard {game_state} user_id={data.user_id} on_move={handle_move} />
+            <GameBoard {game_state} {user_id} on_move={handle_move} />
         {:else}
             <div class="text-gray-400">Waiting for game to start...</div>
         {/if}
