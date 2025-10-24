@@ -2,7 +2,6 @@ import { can_make_move, is_game_completed, is_in_game, type MegaTris } from '$li
 import { z } from 'zod';
 import type { ChatMessage, ChatMessageWithNames, CloseReason, Message } from './messages';
 import { HEARTBEAT_BASE_MS } from '$lib';
-import { auth, cache, db } from '$lib/auth';
 import { get_name } from './database';
 
 export const GAMES: Map<string, Game | TempGame> = new Map();

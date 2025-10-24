@@ -1,33 +1,26 @@
 import { LRUCache } from 'lru-cache';
-import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SQLITE_PATH } from '$env/static/private';
+import { DATABASE_URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from '$env/static/private';
 import { betterAuth } from 'better-auth';
 import { anonymous } from 'better-auth/plugins';
-import Database from 'better-sqlite3';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { mkdirSync } from 'fs';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import * as schema from '../../migrations/auth-schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import * as schema from '../migrations/auth-schema';
 
-const DB_NAME = 'sqlite.db';
-mkdirSync(SQLITE_PATH, { recursive: true });
+export const db = drizzle(DATABASE_URL);
 
-const sqlite = new Database(`${SQLITE_PATH}/${DB_NAME}`);
-export const db = drizzle({ client: sqlite, schema });
-migrate(db, {
-    migrationsFolder: './drizzle'
-});
+await migrate(db, { migrationsFolder: './drizzle' });
 
 export const cache = new LRUCache<string, string>({
     max: 500,
     ttl: 1000 * 60 * 60,
-    // While hosting RAM is much more expensive than the computation required to clear
+    // While hosting, RAM is much more expensive than the computation required to clear
     ttlAutopurge: true
 });
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
-        provider: 'sqlite',
+        provider: 'pg',
         schema
     }),
     socialProviders: {
