@@ -2,7 +2,7 @@
     import type { PageProps } from './$types';
     import PlayerInfo from './PlayerInfo.svelte';
     import GameBoard from './GameBoard.svelte';
-    import { join_game, make_move } from '$lib/data.remote';
+    import { join_game, make_move, send_rematch } from '$lib/data.remote';
     import { auth_client } from '$lib/client';
 
     const session = auth_client.useSession();
@@ -24,7 +24,7 @@
     let error = $derived($overall_state.error);
 
     let current_player_symbol = $derived.by(() => {
-        if (!game_state || game_state.is_draft) return null;
+        if (!game_state || game_state.is_draft || game_ended) return null;
         if (game_state.player1_id === user_id) return 'X' as const;
         if (game_state.player2_id === user_id) return 'O' as const;
         return null;
@@ -73,6 +73,10 @@
             }, 2000);
         }
     }
+
+    function handle_rematch() {
+        send_rematch({ game_id: data.game_id });
+    }
 </script>
 
 <div class="p-4">
@@ -85,7 +89,25 @@
         />
 
         {#if game_ended}
-            <div class="mb-4 rounded bg-yellow-600 p-4 text-center font-bold">Game Ended</div>
+            {@const first_rematch_sent_by =
+                !$overall_state.game_state?.is_draft &&
+                $overall_state.game_state?.first_rematch_sent_by}
+            <div class="mb-2 rounded bg-yellow-600 p-4 text-center">
+                <div class="mb-3 text-lg font-bold">Game Ended</div>
+                <button
+                    onclick={handle_rematch}
+                    disabled={first_rematch_sent_by === user_id}
+                    class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {#if first_rematch_sent_by === user_id}
+                        Rematch Sent
+                    {:else if first_rematch_sent_by}
+                        Accept Rematch
+                    {:else}
+                        Request Rematch
+                    {/if}
+                </button>
+            </div>
         {/if}
 
         {#if error}

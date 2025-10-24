@@ -73,12 +73,4 @@
             {/each}
         {/each}
     </div>
-
-    <div class="mt-4 text-center text-sm text-gray-400">
-        {#if game_state.state.moves.length === 0}
-            First move: play anywhere
-        {:else}
-            Turn: {game_state.state.moves.length % 2 === 0 ? 'X' : 'O'}
-        {/if}
-    </div>
 </div>

@@ -17,12 +17,13 @@ export type Message =
           player2_presence: boolean;
       }
     | {
-          type: 'game_ended';
-      }
-    | {
           type: 'heartbeat';
       }
     | {
           type: 'closing';
           reason: CloseReason;
+      }
+    | {
+          type: 'new_game';
+          game_id: string;
       };

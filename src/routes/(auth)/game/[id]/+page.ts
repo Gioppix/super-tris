@@ -3,6 +3,8 @@ import type { PageLoad } from './$types';
 import type { Message } from '$lib/server/messages';
 import type { Game, TempGame } from '$lib/server/game';
 import { HEARTBEAT_BASE_MS, HEARTBEAT_FRONTEND_MULTIPLIER } from '$lib';
+import { goto } from '$app/navigation';
+import { is_game_completed } from '$lib/logic';
 
 interface GameState {
     game_state: Game | TempGame | null;
@@ -47,30 +49,34 @@ export const load: PageLoad = ({ params: { id } }) => {
             };
 
             stream.onmessage = (event) => {
-                console.log('here');
                 const message = JSON.parse(event.data) as Message;
-                console.log(message);
 
-                update((current_state) => {
+                update((overall_state) => {
+                    overall_state.game_ended =
+                        overall_state.game_state && !overall_state.game_state.is_draft
+                            ? is_game_completed(overall_state.game_state.state)
+                            : false;
+
                     switch (message.type) {
                         case 'game_state':
-                            return { ...current_state, game_state: message.game_state };
+                            return { ...overall_state, game_state: message.game_state };
                         case 'player_presence':
                             return {
-                                ...current_state,
+                                ...overall_state,
                                 player1_presence: message.player1_presence,
                                 player2_presence: message.player2_presence
                             };
-                        case 'game_ended':
-                            return { ...current_state, game_ended: true };
                         case 'ok':
-                            return current_state;
+                            return overall_state;
                         case 'heartbeat':
                             reset_heartbeat_timeout();
-                            return current_state;
+                            return overall_state;
                         case 'closing':
                             stop();
-                            return { ...current_state, error: message.reason };
+                            return { ...overall_state, error: message.reason };
+                        case 'new_game':
+                            goto(`/game/${message.game_id}`);
+                            return overall_state;
                         default:
                             ((x: never) => {
                                 throw new Error(`Unhandled message type: ${x}`);

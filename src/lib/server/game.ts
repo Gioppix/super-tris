@@ -159,11 +159,48 @@ export const try_make_move = (
 
     notify(game_id, { type: 'game_state', game_state: game });
 
-    if (is_game_completed(game.state)) {
-        notify(game_id, { type: 'game_ended' });
+    return true;
+};
+
+export const handle_rematch = (game_id: string, game: Game, user_id: string): boolean => {
+    if (game.first_rematch_sent_by) {
+        // This is an accept
+        // Switch sides
+        const new_game_id = create_insert_game(game.name, game.player2_id, game.player1_id);
+        notify(game_id, { type: 'new_game', game_id: new_game_id });
+    } else {
+        // This is a proposal
+        game.first_rematch_sent_by = user_id;
+        notify(game_id, { type: 'game_state', game_state: game });
     }
 
     return true;
+};
+
+export const create_insert_game = (
+    name: string | undefined,
+    player1_id: string,
+    player2_id?: string
+): string => {
+    const id = crypto.randomUUID();
+
+    if (player2_id) {
+        GAMES.set(id, {
+            is_draft: false,
+            name,
+            player1_id,
+            player2_id,
+            state: { moves: [] }
+        });
+    } else {
+        GAMES.set(id, {
+            is_draft: true,
+            name,
+            player1_id
+        });
+    }
+
+    return id;
 };
 
 export const CreateGame = z.object({
@@ -183,6 +220,11 @@ export const MakeMove = z.object({
 });
 export type MakeMove = z.infer<typeof MakeMove>;
 
+export const SendRematch = z.object({
+    game_id: z.uuidv4()
+});
+export type SendRematch = z.infer<typeof SendRematch>;
+
 type GameBase = {
     name?: string;
     player1_id: string;
@@ -196,6 +238,7 @@ export type Game = GameBase & {
     is_draft: false;
     state: MegaTris;
     player2_id: string;
+    first_rematch_sent_by?: string;
 };
 
 export interface Client {
