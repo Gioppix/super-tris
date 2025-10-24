@@ -56,7 +56,7 @@
 </script>
 
 <div class="flex w-full flex-col items-center justify-center">
-    <div class="grid w-full max-w-96 grid-cols-3 gap-2 rounded bg-gray-800 p-2">
+    <div class="grid w-full max-w-lg grid-cols-3 gap-2 rounded bg-gray-800 p-2">
         {#each Array(3) as _, mini_y}
             {#each Array(3) as _, mini_x}
                 {@const is_highlighted = highlighted_mini_boards.has(`${mini_x},${mini_y}`)}

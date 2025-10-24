@@ -54,6 +54,25 @@
             game_id: data.game_id
         });
     }
+
+    let copy_button_text = $state<'Copy' | 'Copied!'>('Copy');
+    let copy_timer: ReturnType<typeof setTimeout> | null = null;
+
+    function handle_copy() {
+        if (typeof window !== 'undefined') {
+            navigator.clipboard.writeText(window.location.href);
+            copy_button_text = 'Copied!';
+
+            if (copy_timer) {
+                clearTimeout(copy_timer);
+            }
+
+            copy_timer = setTimeout(() => {
+                copy_button_text = 'Copy';
+                copy_timer = null;
+            }, 2000);
+        }
+    }
 </script>
 
 <div class="p-4">
@@ -76,6 +95,20 @@
                 {#if is_owner}
                     <div class="text-xl text-gray-400">Waiting for opponent to join...</div>
                     <div class="mt-4 text-sm text-gray-500">Share this URL to invite a player</div>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <input
+                            type="text"
+                            readonly
+                            value={typeof window !== 'undefined' ? window.location.href : ''}
+                            class="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300"
+                        />
+                        <button
+                            onclick={handle_copy}
+                            class="w-24 rounded bg-gray-700 px-4 py-2 text-sm transition-colors hover:bg-gray-600"
+                        >
+                            {copy_button_text}
+                        </button>
+                    </div>
                 {:else}
                     <div class="mb-4 text-xl text-gray-400">Ready to play?</div>
                     <button

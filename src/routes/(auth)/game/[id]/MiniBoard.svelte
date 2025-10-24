@@ -62,8 +62,13 @@
         if (mini_moves.length === 9) return 'draw';
         return null;
     }
-
     let mini_winner = $derived(get_mini_winner());
+
+    function is_last_move(x: number, y: number): boolean {
+        if (game_state.moves.length === 0) return false;
+        const [last_x, last_y] = game_state.moves[game_state.moves.length - 1];
+        return last_x === x && last_y === y;
+    }
 </script>
 
 <div
@@ -90,11 +95,13 @@
             {@const y = mini_y * 3 + local_y}
             {@const value = get_cell_value(x, y)}
             {@const is_possible_move = possible_moves.has(`${x},${y}`)}
+            {@const is_last = is_last_move(x, y)}
 
             <Cell
                 {value}
                 {is_possible_move}
                 {is_player_turn}
+                {is_last}
                 on_click={() => on_cell_click(x, y)}
             />
         {/each}

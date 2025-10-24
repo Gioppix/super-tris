@@ -6,7 +6,7 @@
 
 <div class="bg-gray-700 p-2">
     <div class="flex justify-between">
-        <a href="/">Super Tris</a>
+        <a class="text-lg underline" href="/">Super Tris</a>
         <div>
             {#if $session.data}
                 <div class="flex gap-2">
@@ -14,7 +14,7 @@
                         {$session.data.user.name}
                     </p>
                     <button
-                        class="cursor-pointer"
+                        class="cursor-pointer underline"
                         on:click={async () => {
                             await auth_client.signOut();
                         }}
