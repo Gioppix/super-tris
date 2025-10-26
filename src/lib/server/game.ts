@@ -8,8 +8,34 @@ export const GAMES: Map<string, Game | TempGame> = new Map();
 export const MESSAGES: Map<string, ChatMessage[]> = new Map();
 
 GAMES.set('d3d4dfff-b8d1-41e5-9332-15a6ab6a8835', {
-    is_draft: true,
-    player1_id: 'd3d4dfff-b8d1-41e5-9332-15a6ab6a8836'
+    is_draft: false,
+    player1_id: 'KebVFQpswVFcCF4wGoBVOnttN4AsR4HV',
+    player2_id: 'KebVFQpswVFcCF4wGoBVOnttN4AsR4Hv',
+    state: {
+        moves: [
+            [3, 5],
+            [0, 8],
+            [0, 6],
+            [0, 2],
+            [0, 7],
+            [2, 4],
+            [6, 4],
+            [0, 4],
+            [0, 3],
+            [1, 2],
+            [3, 6],
+            [2, 2],
+            [6, 7],
+            [1, 4],
+            [4, 3],
+            [5, 0],
+            [6, 2],
+            [2, 8],
+            [6, 8],
+            [1, 8]
+        ]
+    },
+    rematch_game_id: 'd3d4dfff-b8d1-41e5-9332-15a6ab6a8836'
 });
 
 console.log('init backend');
@@ -171,6 +197,7 @@ export const handle_rematch = (game_id: string, game: Game, user_id: string): bo
         // This is an accept
         // Switch sides
         const new_game_id = create_insert_game(game.name, game.player2_id, game.player1_id);
+        game.rematch_game_id = new_game_id;
         notify(game_id, { type: 'new_game', game_id: new_game_id });
     } else {
         // This is a proposal
@@ -282,6 +309,7 @@ export type Game = GameBase & {
     state: MegaTris;
     player2_id: string;
     first_rematch_sent_by?: string;
+    rematch_game_id?: string;
 };
 
 export interface Client {

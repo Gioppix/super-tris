@@ -90,24 +90,33 @@
         />
 
         {#if game_ended}
-            {@const first_rematch_sent_by =
-                !$overall_state.game_state?.is_draft &&
-                $overall_state.game_state?.first_rematch_sent_by}
+            {@const gs = !$overall_state.game_state?.is_draft ? $overall_state.game_state : null}
+            {@const first_rematch_sent_by = gs?.first_rematch_sent_by}
+
             <div class="mb-2 rounded bg-yellow-600 p-4 text-center">
                 <div class="mb-3 text-lg font-bold">Game Ended</div>
-                <button
-                    onclick={handle_rematch}
-                    disabled={first_rematch_sent_by === user_id}
-                    class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {#if first_rematch_sent_by === user_id}
-                        Rematch Sent
-                    {:else if first_rematch_sent_by}
-                        Accept Rematch
-                    {:else}
-                        Request Rematch
-                    {/if}
-                </button>
+                {#if gs?.rematch_game_id}
+                    <a
+                        class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        href="/game/{gs.rematch_game_id}"
+                    >
+                        Join rematch
+                    </a>
+                {:else}
+                    <button
+                        onclick={handle_rematch}
+                        disabled={first_rematch_sent_by === user_id}
+                        class="rounded bg-blue-600 px-6 py-3 font-bold transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {#if first_rematch_sent_by === user_id}
+                            Rematch Sent
+                        {:else if first_rematch_sent_by}
+                            Accept Rematch
+                        {:else}
+                            Request Rematch
+                        {/if}
+                    </button>
+                {/if}
             </div>
         {/if}
 
