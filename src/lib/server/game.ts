@@ -170,7 +170,19 @@ const notify = (game_id: number, message: Message) => {
 
 const send_message = (client: Client, message: Message) => {
     const data = JSON.stringify(message);
-    client.stream.controller.enqueue(`data: ${data}\n\n`);
+    try {
+        client.stream.controller.enqueue(`data: ${data}\n\n`);
+    } catch (e) {
+        console.error(`Removing client: ${e}`);
+
+        // Remove this client from all games
+        for (const [game_id, clients] of CLIENTS.entries()) {
+            CLIENTS.set(
+                game_id,
+                clients.filter((c) => c !== client)
+            );
+        }
+    }
 };
 
 export const notify_all = async (message: Message) => {
