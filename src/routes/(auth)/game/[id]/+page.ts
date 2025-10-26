@@ -1,13 +1,13 @@
 import { readable } from 'svelte/store';
 import type { PageLoad } from './$types';
 import type { ChatMessageWithNames, Message } from '$lib/server/messages';
-import type { Game, TempGame } from '$lib/server/game';
+import type { Game } from '$lib/server/game';
 import { HEARTBEAT_BASE_MS, HEARTBEAT_FRONTEND_MULTIPLIER } from '$lib';
 import { goto } from '$app/navigation';
 import { is_game_completed } from '$lib/logic';
 
 interface GameState {
-    game_state: Game | TempGame | null;
+    game_state: Game | null;
     player1_presence: boolean;
     player2_presence: boolean;
     game_ended: boolean;
@@ -54,7 +54,7 @@ export const load: PageLoad = ({ params: { id } }) => {
 
                 update((overall_state) => {
                     overall_state.game_ended =
-                        overall_state.game_state && !overall_state.game_state.is_draft
+                        overall_state.game_state && overall_state.game_state.player2_id
                             ? is_game_completed(overall_state.game_state.state)
                             : false;
 

@@ -4,7 +4,7 @@
     import { onMount, tick } from 'svelte';
 
     interface Props {
-        game_id: string;
+        game_id: string | number;
         messages: ChatMessageWithNames[] | undefined;
         user_id: string;
     }
@@ -22,7 +22,7 @@
         if (!message_input.trim()) return;
 
         await send_message({
-            game_id,
+            game_id: typeof game_id === 'string' ? parseInt(game_id, 10) : game_id,
             message: message_input
         });
 

@@ -12,7 +12,8 @@
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "format": "prettier --write .",
         "lint": "prettier --check .",
-        "start": "node build"
+        "start": "node build",
+        "migrate": "npx @better-auth/cli migrate"
     },
     "devDependencies": {
         "@sveltejs/adapter-node": "^5.3.2",

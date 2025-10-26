@@ -19,32 +19,35 @@
     });
 
     let game_state = $derived($overall_state.game_state);
-    let is_draft = $derived(game_state?.is_draft ?? false);
+    let is_draft = $derived(!game_state?.player2_id);
     let is_owner = $derived(game_state?.player1_id === user_id);
     let game_ended = $derived($overall_state.game_ended);
     let error = $derived($overall_state.error);
 
     let current_player_symbol = $derived.by(() => {
-        if (!game_state || game_state.is_draft || game_ended) return null;
+        if (!game_state || !game_state.player2_id || game_ended) return null;
         if (game_state.player1_id === user_id) return 'X' as const;
         if (game_state.player2_id === user_id) return 'O' as const;
         return null;
     });
 
     let is_player1 = $derived(game_state?.player1_id === user_id);
-    let is_player2 = $derived(
-        game_state && game_state.is_draft ? false : game_state?.player2_id === user_id
-    );
-    let move_count = $derived(game_state?.is_draft === false ? game_state.state.moves.length : 0);
+    let is_player2 = $derived(game_state?.player2_id === user_id);
+    let move_count = $derived(game_state?.player2_id ? game_state.state.moves.length : 0);
     let is_player1_turn = $derived(move_count % 2 === 0);
     let is_player_turn = $derived(
-        !game_state?.is_draft &&
-            ((is_player1 && is_player1_turn) || (is_player2 && !is_player1_turn))
+        game_state?.player2_id
+            ? (is_player1 && is_player1_turn) || (is_player2 && !is_player1_turn)
+            : false
+    );
+
+    let game_id_num = $derived(
+        typeof data.game_id === 'string' ? parseInt(data.game_id, 10) : data.game_id
     );
 
     async function handle_move(x: number, y: number) {
         await make_move({
-            game_id: data.game_id,
+            game_id: game_id_num,
             x,
             y
         });
@@ -52,7 +55,7 @@
 
     async function handle_join() {
         await join_game({
-            game_id: data.game_id
+            game_id: game_id_num
         });
     }
 
@@ -76,7 +79,7 @@
     }
 
     function handle_rematch() {
-        send_rematch({ game_id: data.game_id });
+        send_rematch({ game_id: game_id_num });
     }
 </script>
 
@@ -90,7 +93,7 @@
         />
 
         {#if game_ended}
-            {@const gs = !$overall_state.game_state?.is_draft ? $overall_state.game_state : null}
+            {@const gs = $overall_state.game_state?.player2_id ? $overall_state.game_state : null}
             {@const first_rematch_sent_by = gs?.first_rematch_sent_by}
 
             <div class="mb-2 rounded bg-yellow-600 p-4 text-center">
@@ -154,12 +157,12 @@
                         </button>
                     {/if}
                 </div>
-            {:else if game_state && !game_state.is_draft}
+            {:else if game_state && game_state.player2_id}
                 <GameBoard {game_state} {user_id} on_move={handle_move} />
             {:else}
                 <div class="text-gray-400">Waiting for game to start...</div>
             {/if}
-            <Chat game_id={data.game_id} messages={$overall_state.chat} {user_id} />
+            <Chat game_id={game_id_num} messages={$overall_state.chat} {user_id} />
         {/if}
     </div>
 </div>

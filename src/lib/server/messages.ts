@@ -1,4 +1,4 @@
-import type { Game, TempGame } from './game';
+import type { Game } from './game';
 
 export type CloseReason = 'game_not_found' | 'game_started_with_others' | 'game_already_started';
 
@@ -15,7 +15,7 @@ export type ChatMessageWithNames = ChatMessage & {
 export type Message =
     | {
           type: 'game_state';
-          game_state: Game | TempGame;
+          game_state: Game;
       }
     | {
           type: 'ok';
@@ -34,7 +34,7 @@ export type Message =
       }
     | {
           type: 'new_game';
-          game_id: string;
+          game_id: number;
       }
     | {
           type: 'chat_messages';
