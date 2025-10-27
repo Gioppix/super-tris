@@ -2,7 +2,7 @@ import { auth_client } from '$lib/client';
 import { writable } from 'svelte/store';
 import type { LayoutLoad } from './$types';
 
-export const prerender = true;
+export const prerender = false;
 export const ssr = true;
 
 export const load: LayoutLoad = async ({ data }) => {
