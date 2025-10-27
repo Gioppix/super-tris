@@ -13,7 +13,6 @@ import {
     insert_move,
     get_messages,
     insert_message,
-    type Game as DbGame,
     type Move,
     type Message as DbMessage
 } from './database';
@@ -21,20 +20,6 @@ import {
 console.log('init backend');
 
 let CLIENTS: Map<number, Client[]> = new Map();
-
-// Helper to convert DB game + moves to Game object with state
-const to_game_with_state = (game: DbGame, moves: Move[]): Game => {
-    return {
-        name: game.name,
-        player1_id: game.player1_id,
-        player2_id: game.player2_id,
-        state: {
-            moves: moves.map((m) => [m.x, m.y] as [number, number])
-        },
-        first_rematch_sent_by: game.first_rematch_sent_by,
-        rematch_game_id: game.rematch_game_id
-    };
-};
 
 // Helper to convert DB messages to ChatMessage
 const to_chat_message = (db_message: DbMessage): ChatMessage => {
@@ -47,23 +32,19 @@ const to_chat_message = (db_message: DbMessage): ChatMessage => {
 
 export const create_client_request = async (game_id: number, client: Client) => {
     const game = await get_game(game_id);
-    console.log('game here');
 
     if (!game) {
         close_client(client, 'game_not_found');
         return;
     }
 
-    const moves = await get_moves(game_id);
-    const game_state = to_game_with_state(game, moves);
-
     // Only allow owners and guests (if game not started)
-    if (is_in_game(game_state, client.user_id) || !game.player2_id) {
+    if (is_in_game(game, client.user_id) || !game.player2_id) {
         let current_clients = CLIENTS.get(game_id) ?? [];
         current_clients.push(client);
         CLIENTS.set(game_id, current_clients);
 
-        notify(game_id, { type: 'game_state', game_state });
+        notify(game_id, { type: 'game_state', game_state: game });
         check_presence(game_id);
 
         const db_messages = await get_messages(game_id);
@@ -128,9 +109,8 @@ export const player_2_join_game = async (
     });
 
     // Fetch updated game and notify
-    const updated_game = await get_game(join_game.game_id);
-    const moves = await get_moves(join_game.game_id);
-    const game_state = to_game_with_state(updated_game!, moves);
+    const game_state = await get_game(join_game.game_id);
+    if (!game_state) return false;
 
     notify(join_game.game_id, { type: 'game_state', game_state });
     check_presence(join_game.game_id);
@@ -212,9 +192,8 @@ export const try_make_move = async (
     await insert_move(game_id, x, y);
 
     // Fetch updated game state
-    const moves = await get_moves(game_id);
-    const db_game = await get_game(game_id);
-    const updated_game = to_game_with_state(db_game!, moves);
+    const updated_game = await get_game(game_id);
+    if (!updated_game) return false;
 
     notify(game_id, { type: 'game_state', game_state: updated_game });
 
@@ -240,10 +219,8 @@ export const handle_rematch = async (
         // This is a proposal
         await update_rematch_proposal(game_id, user_id);
 
-        // Fetch updated game state
-        const db_game = await get_game(game_id);
-        const moves = await get_moves(game_id);
-        const updated_game = to_game_with_state(db_game!, moves);
+        const updated_game = await get_game(game_id);
+        if (!updated_game) return false;
 
         notify(game_id, { type: 'game_state', game_state: updated_game });
     }
@@ -280,6 +257,12 @@ export const create_insert_game = async (
     return game_id;
 };
 
+export const GameId = z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.int().min(0).max(2147483646));
+export type GameId = z.infer<typeof GameId>;
+
 export const CreateGame = z.object({
     name: z.string().optional()
 });
@@ -308,14 +291,14 @@ export const SendMessage = z.object({
 });
 export type SendMessage = z.infer<typeof SendMessage>;
 
-export type Game = {
+export interface Game {
     name?: string;
     player1_id: string;
     player2_id?: string;
     state: MegaTris;
     first_rematch_sent_by?: string;
     rematch_game_id?: number;
-};
+}
 
 export interface Client {
     user_id: string;

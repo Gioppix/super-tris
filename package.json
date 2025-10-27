@@ -16,6 +16,7 @@
         "migrate": "npx @better-auth/cli migrate"
     },
     "devDependencies": {
+        "@prettier/plugin-xml": "^3.4.2",
         "@sveltejs/adapter-node": "^5.3.2",
         "@sveltejs/kit": "^2.43.2",
         "@sveltejs/vite-plugin-svelte": "^6.2.0",

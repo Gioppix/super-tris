@@ -11,8 +11,9 @@
     let { data }: PageProps = $props();
     let overall_state = $derived(data.overall_state);
 
+    let session_data = $derived(data.session_data);
     let user_id = $derived.by(() => {
-        const user_id = $session.data?.user.id;
+        const user_id = $session_data?.user.id;
         if (!user_id) throw new Error('No user_id');
 
         return user_id;
@@ -88,6 +89,7 @@
         <PlayerInfo
             player1_presence={$overall_state.player1_presence}
             player2_presence={$overall_state.player2_presence}
+            player_symbol={is_player1 ? 'X' : 'O'}
             {current_player_symbol}
             {is_player_turn}
         />

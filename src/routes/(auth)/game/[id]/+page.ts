@@ -15,14 +15,19 @@ interface GameState {
     chat?: ChatMessageWithNames[];
 }
 
-export const load: PageLoad = ({ params: { id } }) => {
+// This load function is used for realtime; can't be server-side rendered
+export const ssr = false;
+
+export const load: PageLoad = async ({ params: { id }, data }) => {
+    const initial_game = data.initial_game;
+
     const overall_state = readable<GameState>(
         {
-            game_state: null,
+            game_state: initial_game,
             player1_presence: false,
             player2_presence: false,
             game_ended: false,
-            error: null
+            error: initial_game == null ? 'Game not found' : null
         },
         (_, update) => {
             const stream = new EventSource(`/api/${id}`);

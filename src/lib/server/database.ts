@@ -1,6 +1,8 @@
 import { DATABASE_URL } from '$env/static/private';
 import { LRUCache } from 'lru-cache';
 import { Pool } from 'pg';
+import type { Game } from './game';
+import z from 'zod';
 
 export const db = new Pool({
     connectionString: DATABASE_URL
@@ -28,18 +30,6 @@ export const get_name = async (user_id: string) => {
     cache.set(cache_key, name, { ttl: 1000 * 60 * 5 });
     return name;
 };
-
-// Game database functions
-
-export interface Game {
-    game_id: number;
-    name?: string;
-    player1_id: string;
-    player2_id?: string;
-    first_rematch_sent_by?: string;
-    rematch_game_id?: number;
-    created_at: Date;
-}
 
 export interface Move {
     move_id: number;
@@ -72,13 +62,54 @@ export const create_game = async (
 };
 
 export const get_game = async (game_id: number): Promise<Game | null> => {
+    const GameQuerySchema = z.object({
+        name: z.string().nullable(),
+        player1_id: z.string(),
+        player2_id: z.string().nullable(),
+        first_rematch_sent_by: z.string().nullable(),
+        rematch_game_id: z.number().nullable(),
+        moves: z
+            .array(
+                z.object({
+                    x: z.number(),
+                    y: z.number()
+                })
+            )
+            .nullable()
+    });
+
     const result = await db.query(
-        `SELECT game_id, name, player1_id, player2_id, first_rematch_sent_by, rematch_game_id, created_at
-         FROM game
-         WHERE game_id = $1`,
+        `
+        SELECT name,
+               player1_id,
+               player2_id,
+               first_rematch_sent_by,
+               rematch_game_id,
+               (
+                   SELECT JSON_AGG(JSON_BUILD_OBJECT('x', move.x, 'y', move.y) ORDER BY move.move_id)
+                   FROM move
+                   WHERE move.game_id = game.game_id) AS moves
+        FROM game
+        WHERE game.game_id = $1
+        `,
         [game_id]
     );
-    return result.rows[0] ?? null;
+    const first = result.rows[0];
+
+    if (!first) return null;
+
+    const game = GameQuerySchema.parse(first);
+
+    return {
+        name: game.name ?? undefined,
+        player1_id: game.player1_id,
+        player2_id: game.player2_id ?? undefined,
+        state: {
+            moves: (game.moves ?? []).map((m) => [m.x, m.y] as [number, number])
+        },
+        first_rematch_sent_by: game.first_rematch_sent_by ?? undefined,
+        rematch_game_id: game.rematch_game_id ?? undefined
+    };
 };
 
 export const update_game_player2 = async (game_id: number, player2_id: string): Promise<void> => {

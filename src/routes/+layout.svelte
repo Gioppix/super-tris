@@ -1,28 +1,16 @@
 <script lang="ts">
     import '../app.css';
-    import favicon from '$lib/assets/favicon.svg';
     import Header from './Header.svelte';
-    import { auth_client } from '$lib/client';
-    import Auth from '$lib/components/Auth.svelte';
+    import type { LayoutData } from './$types';
 
-    let { children } = $props();
+    let { children, data }: { children?: any; data: LayoutData } = $props();
 
-    const session = auth_client.useSession();
+    let session_data = $derived(data.session_data);
 </script>
 
-<svelte:head>
-    <link rel="icon" href={favicon} />
-</svelte:head>
-
 <div class="flex min-h-dvh w-dvw flex-col bg-gray-900 text-white">
-    <Header />
-    <div class="">
-        {#if $session.data?.user.id}
-            {@render children?.()}
-        {:else}
-            <div class="flex h-full flex-col items-center justify-center">
-                <Auth />
-            </div>
-        {/if}
+    <Header data={$session_data} />
+    <div class="flex min-h-0 grow flex-col">
+        {@render children?.()}
     </div>
 </div>

@@ -1,12 +1,8 @@
-import { client_left, create_client_request } from '$lib/server/game.js';
+import { client_left, create_client_request, GameId } from '$lib/server/game.js';
 
 export function GET({ params: { game_id }, locals }) {
     const stream_id = crypto.randomUUID();
-    const game_id_num = parseInt(game_id, 10);
-
-    if (game_id_num < 1 || game_id_num > 2147483647) {
-        return new Response('Invalid game ID', { status: 400 });
-    }
+    const game_id_num = GameId.parse(game_id);
 
     const stream = new ReadableStream({
         start(controller) {

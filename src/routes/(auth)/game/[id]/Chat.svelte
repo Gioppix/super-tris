@@ -17,14 +17,20 @@
     let new_unread_messages = $state(0);
     let allow_auto_scroll = true;
     let programmatic_scroll = false;
+    let sending = $state(false);
 
     async function handle_send() {
         if (!message_input.trim()) return;
 
-        await send_message({
-            game_id: typeof game_id === 'string' ? parseInt(game_id, 10) : game_id,
-            message: message_input
-        });
+        try {
+            sending = true;
+            await send_message({
+                game_id: typeof game_id === 'string' ? parseInt(game_id, 10) : game_id,
+                message: message_input
+            });
+        } finally {
+            sending = false;
+        }
 
         message_input = '';
 
@@ -154,7 +160,7 @@
         />
         <button
             onclick={handle_send}
-            disabled={!message_input.trim()}
+            disabled={!message_input.trim() || sending}
             class="rounded bg-blue-600 px-4 py-2 text-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
             Send
