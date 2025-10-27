@@ -14,9 +14,9 @@
     <link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="flex h-dvh w-dvw flex-col bg-gray-900 text-white">
+<div class="flex min-h-dvh w-dvw flex-col bg-gray-900 text-white">
     <Header />
-    <div class="min-h-0 grow">
+    <div class="">
         {#if $session.data?.user.id}
             {@render children?.()}
         {:else}

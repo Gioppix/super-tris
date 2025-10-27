@@ -95,7 +95,7 @@
         <div
             bind:this={div}
             onscroll={handle_scroll}
-            class="h-full overflow-y-auto rounded bg-gray-900 p-2 pb-0"
+            class="h-full overflow-y-auto overscroll-contain rounded bg-gray-900 p-2 pb-0"
         >
             {#if messages && messages.length > 0}
                 {#each messages as message}
