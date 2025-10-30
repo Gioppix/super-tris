@@ -12,6 +12,15 @@ export type ChatMessageWithNames = ChatMessage & {
     name: string;
 };
 
+export interface MouseMoveMessage {
+    user_id: string;
+    /** `null` means the cursor left the board */
+    coods: {
+        x: number;
+        y: number;
+    } | null;
+}
+
 export type Message =
     | {
           type: 'game_state';
@@ -43,4 +52,8 @@ export type Message =
     | {
           type: 'chat_message';
           message: ChatMessageWithNames;
+      }
+    | {
+          type: 'mouse_move';
+          mouse_move: MouseMoveMessage;
       };

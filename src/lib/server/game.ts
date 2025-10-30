@@ -13,7 +13,6 @@ import {
     insert_move,
     get_messages,
     insert_message,
-    type Move,
     type Message as DbMessage
 } from './database';
 
@@ -118,6 +117,18 @@ export const player_2_join_game = async (
     return true;
 };
 
+export const mouse_move_event = async (user_id: string, move: MouseMove): Promise<boolean> => {
+    notify(move.game_id, {
+        type: 'mouse_move',
+        mouse_move: {
+            user_id,
+            coods: move.cursor_present ? { x: move.board_x, y: move.board_y } : null
+        }
+    });
+
+    return true;
+};
+
 setInterval(() => {
     notify_all({ type: 'heartbeat' });
 }, HEARTBEAT_BASE_MS);
@@ -140,10 +151,14 @@ const check_presence = async (game_id: number) => {
     });
 };
 
-const notify = (game_id: number, message: Message) => {
+const notify = (game_id: number, message: Message, exclude_user?: string) => {
     const clients = CLIENTS.get(game_id) ?? [];
 
     clients.forEach((client) => {
+        if (exclude_user === client.user_id) {
+            return;
+        }
+
         send_message(client, message);
     });
 };
@@ -284,6 +299,24 @@ export const SendRematch = z.object({
     game_id: z.int().positive()
 });
 export type SendRematch = z.infer<typeof SendRematch>;
+
+export const MouseMove = z
+    .object({
+        game_id: z.int().positive()
+    })
+    .and(
+        z.union([
+            z.object({
+                cursor_present: z.literal(true),
+                board_x: z.number().min(0.0).max(100.0),
+                board_y: z.number().min(0.0).max(100.0)
+            }),
+            z.object({
+                cursor_present: z.literal(false)
+            })
+        ])
+    );
+export type MouseMove = z.infer<typeof MouseMove>;
 
 export const SendMessage = z.object({
     game_id: z.int().positive(),

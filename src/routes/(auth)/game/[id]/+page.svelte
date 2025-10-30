@@ -2,9 +2,10 @@
     import type { PageProps } from './$types';
     import PlayerInfo from './PlayerInfo.svelte';
     import GameBoard from './GameBoard.svelte';
-    import { join_game, make_move, send_rematch } from '$lib/data.remote';
+    import { join_game, make_move, send_mouse_move, send_rematch } from '$lib/data.remote';
     import { auth_client } from '$lib/client';
     import Chat from './Chat.svelte';
+    import { Spring } from 'svelte/motion';
 
     const session = auth_client.useSession();
 
@@ -41,6 +42,7 @@
             ? (is_player1 && is_player1_turn) || (is_player2 && !is_player1_turn)
             : false
     );
+    let maybe_mouse = $derived($overall_state.opponent_mouse);
 
     let game_id_num = $derived(
         typeof data.game_id === 'string' ? parseInt(data.game_id, 10) : data.game_id
@@ -81,6 +83,53 @@
 
     function handle_rematch() {
         send_rematch({ game_id: game_id_num });
+    }
+
+    let last_mouse_send = 0;
+    let mouse_timer: ReturnType<typeof setTimeout> | null = null;
+    const MOUSE_DEBOUNCE_MS = 100;
+    const TRESHOLD_PERCENTAGE = 0.01;
+
+    function on_mouse_move(coords?: { x: number; y: number }) {
+        if (navigator.maxTouchPoints > 0) {
+            return;
+        }
+
+        const now = Date.now();
+
+        // Clear any pending timer
+        if (mouse_timer) {
+            clearTimeout(mouse_timer);
+            mouse_timer = null;
+        }
+
+        // Schedule a send (immediately if enough time has passed, or delayed otherwise)
+        const delay = Math.max(0, MOUSE_DEBOUNCE_MS - (now - last_mouse_send));
+        mouse_timer = setTimeout(() => {
+            last_mouse_send = Date.now();
+
+            const in_bounds_and_exists =
+                coords &&
+                coords.x >= TRESHOLD_PERCENTAGE &&
+                coords.x <= 100 - TRESHOLD_PERCENTAGE &&
+                coords.y >= TRESHOLD_PERCENTAGE &&
+                coords.y <= 100 - TRESHOLD_PERCENTAGE;
+
+            if (in_bounds_and_exists) {
+                send_mouse_move({
+                    game_id: game_id_num,
+                    cursor_present: true,
+                    board_x: Math.round(coords.x * 1000) / 1000,
+                    board_y: Math.round(coords.y * 1000) / 1000
+                });
+            } else {
+                send_mouse_move({
+                    game_id: game_id_num,
+                    cursor_present: false
+                });
+            }
+            mouse_timer = null;
+        }, delay);
     }
 </script>
 
@@ -160,7 +209,13 @@
                     {/if}
                 </div>
             {:else if game_state && game_state.player2_id}
-                <GameBoard {game_state} {user_id} on_move={handle_move} />
+                <GameBoard
+                    opponent_mouse={$overall_state.opponent_mouse}
+                    {on_mouse_move}
+                    {game_state}
+                    {user_id}
+                    on_move={handle_move}
+                />
             {:else}
                 <div class="text-gray-400">Waiting for game to start...</div>
             {/if}

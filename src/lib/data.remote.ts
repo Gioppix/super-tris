@@ -7,6 +7,8 @@ import {
     handle_rematch,
     JoinGame,
     MakeMove,
+    mouse_move_event,
+    MouseMove,
     player_2_join_game,
     SendMessage,
     SendRematch,
@@ -126,6 +128,24 @@ export const send_message = command(SendMessage, async (message: SendMessage): P
     }
 
     await handle_message(message.game_id, user_id, message.message);
+
+    return true;
+});
+
+export const send_mouse_move = command(MouseMove, async (message: MouseMove): Promise<boolean> => {
+    let user_id = await get_user_id();
+    if (!user_id) return false;
+
+    const game = await get_game(message.game_id);
+
+    if (!game) {
+        return false;
+    }
+    if (!is_in_game(game, user_id)) {
+        return false;
+    }
+
+    mouse_move_event(user_id, message);
 
     return true;
 });

@@ -104,7 +104,7 @@ export const get_possible_moves = (game: Game, user_id: string): [number, number
 };
 
 export const is_in_game = (game: Game, user_id: string): boolean => {
-    return user_id === game.player1_id || (user_id === game.player2_id && game.player2_id != null);
+    return user_id === game.player1_id || (game.player2_id ? user_id === game.player2_id : false);
 };
 
 export const can_make_move = (game: Game, user_id: string, x: number, y: number): boolean => {

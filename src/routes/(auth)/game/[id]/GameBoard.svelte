@@ -2,14 +2,19 @@
     import type { Game } from '$lib/server/game';
     import { get_possible_moves } from '$lib/logic';
     import MiniBoard from './MiniBoard.svelte';
+    import { MousePointer2 } from '@lucide/svelte';
+    import type { Spring } from 'svelte/motion';
+    import { fade } from 'svelte/transition';
 
     interface Props {
         game_state: Game;
         user_id: string;
         on_move: (x: number, y: number) => void;
+        on_mouse_move: (coords?: { x: number; y: number }) => void;
+        opponent_mouse: Spring<{ x: number; y: number }> | null;
     }
 
-    let { game_state, user_id, on_move }: Props = $props();
+    let { game_state, user_id, on_move, on_mouse_move, opponent_mouse }: Props = $props();
 
     let possible_moves_array = $derived(get_possible_moves(game_state, user_id));
     let possible_moves_set = $derived(new Set(possible_moves_array.map(([x, y]) => `${x},${y}`)));
@@ -53,10 +58,30 @@
         if (!possible_moves_set.has(`${x},${y}`)) return;
         on_move(x, y);
     }
+
+    function handle_mouse_move(
+        event: MouseEvent & { currentTarget: EventTarget & HTMLDivElement }
+    ) {
+        const target = event.currentTarget;
+        const rect = target.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+        on_mouse_move({ x, y });
+    }
+
+    function handle_mouse_out() {
+        on_mouse_move();
+    }
 </script>
 
 <div class="flex w-full flex-col items-center justify-center">
-    <div class="grid w-full max-w-lg grid-cols-3 gap-2 rounded bg-gray-800 p-2">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        onmousemove={handle_mouse_move}
+        onmouseleave={handle_mouse_out}
+        class="relative grid w-full max-w-lg grid-cols-3 gap-2 rounded bg-gray-800 p-2"
+    >
         {#each Array(3) as _, mini_y}
             {#each Array(3) as _, mini_x}
                 {@const is_highlighted = highlighted_mini_boards.has(`${mini_x},${mini_y}`)}
@@ -72,5 +97,15 @@
                 />
             {/each}
         {/each}
+        {#if opponent_mouse && opponent_mouse.current.x != 0 && opponent_mouse.current.y != 0}
+            <div
+                class="pointer-events-none absolute h-4 w-4 opacity-70"
+                style="left: {opponent_mouse.current.x}%; top: {opponent_mouse.current.y}%;"
+                in:fade
+                out:fade
+            >
+                <MousePointer2 class="h-4 w-4" />
+            </div>
+        {/if}
     </div>
 </div>
