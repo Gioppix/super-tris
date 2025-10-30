@@ -110,16 +110,11 @@ export const load: PageLoad = async ({ params: { id }, data, parent }) => {
 
                                 // Update existing spring or create new one
                                 if (overall_state.opponent_mouse) {
-                                    console.log(
-                                        message.mouse_move.coods.x,
-                                        message.mouse_move.coods.y
-                                    );
                                     overall_state.opponent_mouse.set(message.mouse_move.coods, {
                                         preserveMomentum: 500
                                     });
                                     return overall_state;
                                 } else {
-                                    console.log('new s', message.mouse_move.coods);
                                     const opponent_mouse = new Spring(message.mouse_move.coods, {
                                         stiffness: 0.05,
                                         damping: 0.4
