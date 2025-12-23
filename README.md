@@ -1,38 +1,49 @@
-# sv
+# Super Tris
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Ultimate Tic-Tac-Toe (9x9 grid, 3x3 mega board). Real-time multiplayer with SSE.
 
-## Creating a project
+Hosted at [tris.giovannifeltrin.com](https://tris.giovannifeltrin.com) (for now).
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Features
+
+- Real-time multiplayer via Server-Sent Events
+- Server-side rendering with SvelteKit
+- Live game state synchronization
+- Player presence detection
+- Mouse position tracking (see opponent's cursor)
+- In-game chat
+- Rematch system
+
+## Tech Stack
+
+- SvelteKit (SSR + adapter-node)
+- PostgreSQL
+- better-auth for authentication
+- Tailwind CSS
+- Zod for validation
+
+## Development
 
 ```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
 ## Building
 
-To create a production version of your app:
-
 ```sh
 npm run build
+npm start
 ```
 
-You can preview the production build with `npm run preview`.
+## Game Rules
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+9x9 grid where each cell is a 3x3 mini board. Win 3 mini boards in a row to win the game.
+
+Each move determines which mini board your opponent must play in next. If you play at position (x,y) in a mini board, your opponent plays in mini board (x,y). If sent to a completed board, choose any available mini board.
+
+### Next Steps
+
+- Database design is currently trash: my idea was to keep everything in RAM since that wasn't the goal of this project, but it was a bit annoying to I spun up a simple PG instance.
+- Move everything to Web Sockets: faster / more efficient than HTTP calls, would make SSE redundant (I wanted to experiment with that technique)
+- Add ELO, leaderboards, tests...
